@@ -13,9 +13,11 @@
 #include<signal.h>
 #include<iostream>
 #include<unistd.h>
+#include<assert.h>
 #include<fcntl.h>
 #include<errno.h>
 #include<cstdlib>
+#include<cstring>
 #include<string>
 #include<vector>
 #include<queue>
@@ -25,6 +27,9 @@ using namespace std;
 const int MAxBuf = 100;
 const int MinUsual = 5;
 const int MaxUsual = 10;
+const int PORT = 4507;
+const char *ip = "127.0.0.1";
+const int sock_count = 256;
 
 //任务的基类
 class Job 
@@ -121,19 +126,19 @@ void ThreadPool :: AddJob( Job *job )
 {
     pthread_mutex_lock( &mutex );
     JobList.push_back( job );
-    pthread_cond_signal( &cond );
+    pthread_cond_signal( &cond );   //任务添加后发出信号
     pthread_mutex_unlock( &mutex );
 
 }
 
 void ThreadPool :: StopAll() 
 {
-    if ( shutdown ) 
+    if ( shutdown ) //避免重复调用
     {
         return ;
     }
     shutdown = true;
-    pthread_cond_broadcast( &cond );
+    pthread_cond_broadcast( &cond );    //唤醒所有线程
     for ( int i = 0; i < NowNum; i++ ) 
     {
         pthread_join( pid[i], nullptr );
@@ -165,7 +170,7 @@ void* ThreadPool :: FunThread( void *arg )
         //取出一个任务
         vector <Job *> :: iterator itr = JobList.begin();
         Job *job = *itr;
-        JobList.erase( itr );
+        JobList.erase( itr ); //从任务队列删除取出的任务
         pthread_mutex_unlock( &mutex );
         job->Run();
     }
@@ -186,16 +191,96 @@ int ThreadPool :: Getsize()
     return JobList.size();
 }
 
-class MyJob :: public Job 
+class MyJob : public Job 
 {
 public:
     void Run()
     {
 
     }
+};
+
+//封装epoll类
+class MyEpoll 
+{
+public:
+    MyEpoll();
+    ~MyEpoll();
+    void Init();    //初始化
+    int Epoll_wait();   //等待
+    int Epoll_new_client();     //新客户端
+    int Epoll_recv();   //接收数据
+    int Epoll_send();   //发送数据
+private:
+    int sock;
+    int epfd;
+    struct epoll_event ev, *event;  //ev用于处理事件　event数组用于回传要处理的事件
+};
+
+MyEpoll :: MyEpoll() 
+{
+    sock = 0;
+    epfd = 0;
+    event = new epoll_event[20];
 }
 
-class MyEpoll 
+MyEpoll :: ~MyEpoll() 
+{
+    delete[] event;
+    event = nullptr;
+}
+
+void MyEpoll :: Init() 
+{
+    int ret;
+    struct sockaddr_in address;
+    bzero( &address, sizeof(address) );
+    address.sin_family = AF_INET;
+    inet_pton( AF_INET, ip, &address.sin_addr );
+    //address.sin_addr.s_addr = htonl( INADDR_ANY );
+    address.sin_port = htons( PORT );
+   
+    sock = socket( PF_INET, SOCK_STREAM, 0 );   
+    assert( sock != -1 );
+    
+    ret = bind( sock, (struct sockaddr*)&address, sizeof( address ) );
+    assert( ret != -1 );
+
+    ret = listen( sock, 5 );
+    assert( ret != -1 );
+
+    epfd = epoll_create( sock_count );  //创建epoll句柄
+    
+    ev.data.fd = sock;  //设置与要处理的事件相关的文件描述符
+    ev.events = EPOLLIN | EPOLLET;  //设置为ET模式
+    epoll_ctl( epfd, EPOLL_CTL_ADD, sock, &ev );    //注册新事件
+}
+
+int MyEpoll :: Epoll_wait() 
+{
+    return epoll_wait( epfd, events, 20, 500 );
+}
+
+int MyEpoll :: Epoll_new_client() 
+{
+    sockaddr_in client_addr;
+    bzero( &client_addr, sizeof(client_addr) );
+    socklen_t clilen = sizeof( client_addr );
+    
+    int client = accept( sock, (struct sockaddr*)&client_addr, *clilen ); //接受连接
+    
+    ev.events = EPOLLIN | EPOLLET;  
+    ev.data.fd = client;    
+    epoll_ctl( epfd, EPOLL_CTL_ADD, client, &ev );  //注册新事件
+
+}
+
+int MyEpoll :: Epoll_recv() 
+{
+    
+}
+
+int MyEpoll :: Epoll_send() 
 {
     
 }
