@@ -62,6 +62,8 @@ public:
     void create();   //创建线程池中的线程
     void StopAll();  //销毁线程池
     void AddJob( Job *job );   //添加任务
+    void IncThread();   //向线程池中添加线程
+    void RedThread();   //减少线程池中的线程
     int Getsize();  //获取当前任务队列中的任务
 };
 
@@ -167,6 +169,16 @@ void* ThreadPool :: FunThread( void *arg )
         pthread_mutex_unlock( &mutex );
         job->Run();
     }
+}
+
+void ThreadPool :: IncThread() 
+{
+
+}
+
+void ThreadPool :: RedThread() 
+{
+    
 }
 
 int ThreadPool :: Getsize()  
