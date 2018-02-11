@@ -35,6 +35,7 @@ const int sock_count = 256;
 class Job 
 {
 protected:
+    int sockfd;     
     int Number;     //任务选项
     char *buf;      //缓冲区
 public:
@@ -208,11 +209,56 @@ class MyJob : public Job    //实际的任务类
 {
 public:
     void Run();
+    void Set( int num, char *buf, int sock );
+    void randstr( char *buf );
 };
+
+void MyJob :: Set( int num, char *buffer, int sock )     //设置数据
+{
+    sockfd = sock;
+    Number = num;
+    strcpy( buf,buffer );
+}
+
+void randstr( char *buf )   //产生随机字符串
+{
+    int randnum;
+    char str[63] = "qwertyuioplkjhgfdsazxcvbnmQWERYUIOPLKJHGFDSAZXCVBNM123456789";
+    for ( int i = 0; i < 10; i++ ) 
+    {
+        randnum = rand()%62;    //产生随机数
+        *buf = str[randnum];
+        buf++;
+    }
+    *buf = '\0';
+}
 
 void MyJob :: Run()     //执行任务
 {
-    
+    if ( Number == 1 )  //echo 回显服务
+    {
+        send( sockfd, buf, sizeof(buf), MSG_WAITALL );
+    }
+    else if ( Number == 2 )     //discard 丢弃所有数据
+    {
+       bzero( buf, sizeof(buf) ); 
+    }
+    else if ( Number == 3 )     //chargen 不停发送测试数据
+    {
+        randstr( buf );
+        while ( (send( sockfd, buf, sizeof(buf), MSG_WAITALL ) ) != -1 ) 
+        {
+            randstr( buf );
+        }
+    }
+    else if ( Number == 4 )     //daytime 以字符串形式发送当前时间
+    {
+        
+    }
+    else if ( Number == 5 )     //time 以二进制形式发送当前时间
+    {
+
+    }
 }
 
 
@@ -227,8 +273,7 @@ public:
     void Epoll_new_client();     //新客户端
     void Epoll_recv( int sockfd );   //接收数据
     void Epoll_send( int sockfd );   //发送数据
-    void parsing( MyJob &task, char *buf );     //分析数据执行哪个协议
-    void Epoll_close();     //断开连接
+    void Epoll_close( int sockfd );     //断开连接
     void Epoll_run();   //运行
 private:
     int sock;
@@ -299,29 +344,82 @@ void MyEpoll :: Epoll_new_client()
 
 }
 
+struct tmp  //接收数据
+{
+    int number;
+    char buf[256];
+};
 void MyEpoll :: Epoll_recv( int sockfd )
 {
     MyJob task;
-    char buf[256];
+    tmp buf;//char buf[256];
     int nbytes;
-    if ( nbytes = recv( sockfd, buf, sizeof(buf), MSG_WAITALL ) <= 0 )  //阻塞模式接收
+    if ( nbytes = recv( sockfd, (void *)&buf, sizeof(buf), MSG_WAITALL ) <= 0 )  //阻塞模式接收
     {
         ev.data.fd = sockfd;
         ev.events = EPOLLERR;   //对应文件描述符发生错误
         epoll_ctl( epfd, EPOLL_CTL_DEL, sockfd, &ev );
-        close( sockfd );
+        Epoll_close( sockfd ); //断开连接
         return ;
     }
-    parsing( task, buf ); //分析数据执行哪个协议
-    pool->AddJob( &task ); 
+    task.Set( buf.number, buf.buf, sockfd );
+    pool->AddJob( &task ); //往线程池添加任务
 }
 
-void MyEpoll :: parsing( MyJob &task, char *buf ) 
-{
-    :wq
-}
 
 void MyEpoll :: Epoll_send( int sockfd ) 
 {
     
+}
+
+void MyEpoll :: Epoll_close( int sockfd ) 
+{
+    close( sockfd );
+}
+
+void MyEpoll :: Epoll_run() 
+{
+    int nfds;
+    for ( ; ; ) 
+    {
+        nfds = Epoll_wait();
+        if ( nfds == 0 ) 
+        {
+            cout << "Time Out\n";
+            continue;
+        }
+        else if ( nfds == -1 ) 
+        {
+            cout << "Error\n";
+        }
+        else 
+        {
+            for ( int i = 0; i < nfds; i++ )  //处理发生的所有事
+            {
+                if ( event[i].data.fd == sock )     //有新的客户端连接
+                {
+                    Epoll_new_client();
+                }
+                else 
+                {
+                    if ( event[i].events & EPOLLIN ) //有可读事件 
+                    {
+                        Epoll_recv( event[i].data.fd );
+                    }
+                    else if ( event[i].events & EPOLLOUT ) //有可写事件
+                    {
+                        Epoll_send( event[i].data.fd );
+                    }
+                }
+            }
+        }
+        bzero( event, sizeof(event) );  //清空event数组
+    }
+}
+
+int main()
+{
+    MyEpoll epoll;
+    epoll.Init();
+    epoll.Epoll_run();
 }
