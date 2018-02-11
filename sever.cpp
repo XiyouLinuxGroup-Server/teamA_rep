@@ -18,6 +18,7 @@
 #include<errno.h>
 #include<cstdlib>
 #include<cstring>
+#include<time.h>
 #include<string>
 #include<vector>
 #include<queue>
@@ -210,7 +211,8 @@ class MyJob : public Job    //实际的任务类
 public:
     void Run();
     void Set( int num, char *buf, int sock );
-    void randstr( char *buf );
+    void Randstr( char *buf );
+    void GetTime();
 };
 
 void MyJob :: Set( int num, char *buffer, int sock )     //设置数据
@@ -220,7 +222,7 @@ void MyJob :: Set( int num, char *buffer, int sock )     //设置数据
     strcpy( buf,buffer );
 }
 
-void randstr( char *buf )   //产生随机字符串
+void MyJob :: Randstr( char *buf )   //产生随机字符串
 {
     int randnum;
     char str[63] = "qwertyuioplkjhgfdsazxcvbnmQWERYUIOPLKJHGFDSAZXCVBNM123456789";
@@ -232,6 +234,16 @@ void randstr( char *buf )   //产生随机字符串
     }
     *buf = '\0';
 }
+
+void MyJob :: GetTime()     //获取时间
+{
+    time_t t;
+    tm *local;
+    t = time( nullptr );
+    local = localtime( &t );
+    strftime( buf, 64, "%Y-%m-%d %H:%M:%S", local ); 
+}
+
 
 void MyJob :: Run()     //执行任务
 {
@@ -245,19 +257,20 @@ void MyJob :: Run()     //执行任务
     }
     else if ( Number == 3 )     //chargen 不停发送测试数据
     {
-        randstr( buf );
+        Randstr( buf );
         while ( (send( sockfd, buf, sizeof(buf), MSG_WAITALL ) ) != -1 ) 
         {
-            randstr( buf );
+            Randstr( buf );
         }
     }
     else if ( Number == 4 )     //daytime 以字符串形式发送当前时间
     {
-        
+        GetTime();
+        send( sockfd, buf, sizeof(buf), MSG_WAITALL );
     }
     else if ( Number == 5 )     //time 以二进制形式发送当前时间
     {
-
+        
     }
 }
 
