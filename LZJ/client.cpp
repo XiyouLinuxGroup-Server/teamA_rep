@@ -112,9 +112,10 @@ void* TcpTest :: Recv( void *arg )
     while ( 1 ) 
     {
 
-        ret = recv( sock, buf, sizeof(buf), MSG_WAITALL );
+        ret = recv( sock, (void *)buf, sizeof(buf), 0 );
         assert( ret != -1 );
 
+        cout << "字节数  " << ret << endl;
         pthread_mutex_lock( &mutex );
         cout << buf << endl;
         pthread_mutex_unlock( &mutex );
@@ -127,7 +128,7 @@ int main()
     TcpTest Try;
     Try.Init();
     
-    pthread_create( &tid, NULL, Try.Recv, NULL );
+    pthread_create( &tid, nullptr, Try.Recv, nullptr );
     
     Try.Run();
 }

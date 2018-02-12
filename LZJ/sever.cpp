@@ -254,7 +254,7 @@ void MyJob :: Run()     //执行任务
 {
     if ( Number == 1 )  //echo 回显服务
     {
-        send( sockfd, buf, sizeof(buf), MSG_WAITALL );
+        send( sockfd, (void *)buf, sizeof(buf), 0 );
     }
     else if ( Number == 2 )     //discard 丢弃所有数据
     {
@@ -263,15 +263,16 @@ void MyJob :: Run()     //执行任务
     else if ( Number == 3 )     //chargen 不停发送测试数据
     {
         Randstr( buf );
-        while ( (send( sockfd, buf, sizeof(buf), MSG_WAITALL ) ) != -1 ) 
+        while ( (send( sockfd, buf, sizeof(buf), 0 ) ) != -1 ) 
         {
             Randstr( buf );
+            sleep( 1 );
         }
     }
     else if ( Number == 4 )     //daytime 以字符串形式发送当前时间
     {
         GetTime();
-        send( sockfd, buf, sizeof(buf), MSG_WAITALL );
+        send( sockfd, buf, sizeof(buf), 0 );
     }
     else if ( Number == 5 )     //time 以二进制形式发送当前时间
     {
@@ -297,6 +298,7 @@ private:
     int sock;
     int epfd;
     ThreadPool *pool;
+    MyJob task;
     struct epoll_event ev, *event;  //ev用于处理事件　event数组用于回传要处理的事件
 };
 
@@ -345,7 +347,7 @@ void MyEpoll :: Init()
 
 int MyEpoll :: Epoll_wait()     //等待事件 
 {
-    return epoll_wait( epfd, event, 20, 500 );
+    return epoll_wait( epfd, event, 20, -1 );   //-1表示一直等下去直到有时间发生 为任意正整数的时候表示等这么久
 }
 
 void MyEpoll :: Epoll_new_client() 
@@ -369,10 +371,9 @@ struct tmp  //接收数据
 };
 void MyEpoll :: Epoll_recv( int sockfd )
 {
-    MyJob task;
     tmp buf;//char buf[256];
     int nbytes;
-    if ( nbytes = recv( sockfd, (void *)&buf, sizeof(buf), MSG_WAITALL ) <= 0 )  //阻塞模式接收
+    if ( nbytes = recv( sockfd, (void *)&buf, sizeof(buf), 0 ) <= 0 )  
     {
         ev.data.fd = sockfd;
         ev.events = EPOLLERR;   //对应文件描述符发生错误
