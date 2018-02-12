@@ -165,6 +165,9 @@ void ThreadPool :: StopAll()
     }
     delete[] pid;
     pid = nullptr;
+
+    pthread_mutex_destroy( &mutex );
+    pthread_cond_destroy( &cond );
 }
 
 void* ThreadPool :: FunThread( void *arg ) 
@@ -254,7 +257,8 @@ void MyJob :: Run()     //执行任务
 {
     if ( Number == 1 )  //echo 回显服务
     {
-        send( sockfd, (void *)buf, sizeof(buf), 0 );
+        int ret;
+        ret =  send( sockfd, (void *)buf, 256, 0 );
     }
     else if ( Number == 2 )     //discard 丢弃所有数据
     {
@@ -263,7 +267,7 @@ void MyJob :: Run()     //执行任务
     else if ( Number == 3 )     //chargen 不停发送测试数据
     {
         Randstr( buf );
-        while ( (send( sockfd, buf, sizeof(buf), 0 ) ) != -1 ) 
+        while ( (send( sockfd, (void *)buf, 256, 0 ) ) != -1 ) 
         {
             Randstr( buf );
             sleep( 1 );
@@ -272,7 +276,7 @@ void MyJob :: Run()     //执行任务
     else if ( Number == 4 )     //daytime 以字符串形式发送当前时间
     {
         GetTime();
-        send( sockfd, buf, sizeof(buf), 0 );
+        send( sockfd, (void *)buf, 256, 0 );
     }
     else if ( Number == 5 )     //time 以二进制形式发送当前时间
     {

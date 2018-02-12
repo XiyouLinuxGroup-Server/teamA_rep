@@ -97,6 +97,10 @@ void TcpTest :: Run()
         {
             tmp.number = 5;
         }
+        else if ( judge == "exit" ) 
+        {
+            break;
+        }
         if ( tmp.number > 0 && tmp.number < 6 ) 
         {
             send( sock, (void *)&tmp, sizeof(tmp), MSG_WAITALL );
@@ -114,8 +118,11 @@ void* TcpTest :: Recv( void *arg )
 
         ret = recv( sock, (void *)buf, sizeof(buf), 0 );
         assert( ret != -1 );
-
-        cout << "字节数  " << ret << endl;
+        
+        if ( ret <= 0 ) 
+        {
+            break;
+        }
         pthread_mutex_lock( &mutex );
         cout << buf << endl;
         pthread_mutex_unlock( &mutex );
@@ -131,4 +138,5 @@ int main()
     pthread_create( &tid, nullptr, Try.Recv, nullptr );
     
     Try.Run();
+    pthread_mutex_destroy( &Try.mutex );
 }
