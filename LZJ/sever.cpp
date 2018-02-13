@@ -42,7 +42,9 @@ protected:
 public:
     Job();
     ~Job();
-    virtual void Run() = 0;
+    int GetSock();
+    char *GetBuf();
+    virtual void Run( int sock, char *buffer ) = 0;
     
 };
 
@@ -97,6 +99,16 @@ Job :: ~Job()
     Number = -1;
     delete[] buf;
     buf = nullptr;
+}
+
+int Job :: GetSock() 
+{
+    return sockfd;
+}
+
+char *Job :: GetBuf() 
+{
+    return buf;
 }
 
 /*
@@ -195,7 +207,7 @@ void* ThreadPool :: FunThread( void *arg )
         Job *job = *itr;
         JobList.erase( itr ); //从任务队列删除取出的任务
         pthread_mutex_unlock( &mutex );
-        job->Run();
+        job->Run( job->GetSock(), job->GetBuf() );
     }
 }
 
@@ -217,10 +229,10 @@ int ThreadPool :: Getsize()
 class MyJob : public Job    //实际的任务类 
 {
 public:
-    void Run();
+    void Run( int sockfd, char *buf );
     void Set( int num, char *buf, int sock );
-    void Randstr( char *buf );
-    void GetTime();
+    void Randstr( char *buffer );
+    void GetTime( char *buffer );
 };
 
 void MyJob :: Set( int num, char *buffer, int sock )     //设置数据
@@ -230,58 +242,59 @@ void MyJob :: Set( int num, char *buffer, int sock )     //设置数据
     strcpy( buf,buffer );
 }
 
-void MyJob :: Randstr( char *buf )   //产生随机字符串
+void MyJob :: Randstr( char *buffer )   //产生随机字符串
 {
     int randnum;
     char str[63] = "qwertyuioplkjhgfdsazxcvbnmQWERYUIOPLKJHGFDSAZXCVBNM123456789";
     for ( int i = 0; i < 10; i++ ) 
     {
         randnum = rand()%62;    //产生随机数
-        *buf = str[randnum];
-        buf++;
+        *buffer = str[randnum];
+        buffer++;
     }
-    *buf = '\0';
+    *buffer = '\0';
 }
 
-void MyJob :: GetTime()     //获取时间
+void MyJob :: GetTime( char *buffer )     //获取时间
 {
+    bzero( buffer, sizeof( buffer ) );
     time_t t;
     tm *local;
     t = time( nullptr );
     local = localtime( &t );
-    strftime( buf, 64, "%Y-%m-%d %H:%M:%S", local ); 
+    strftime( buffer, 64, "%Y-%m-%d %H:%M:%S", local ); 
 }
 
 
-void MyJob :: Run()     //执行任务
+void MyJob :: Run( int sock, char *buffer )     //执行任务
 {
     if ( Number == 1 )  //echo 回显服务
     {
-        int ret;
-        ret =  send( sockfd, (void *)buf, 256, 0 );
+        send( sock, (void *)buffer, 256, 0 );
     }
     else if ( Number == 2 )     //discard 丢弃所有数据
     {
-       bzero( buf, sizeof(buf) ); 
+       bzero( buf, sizeof(buffer) ); 
     }
     else if ( Number == 3 )     //chargen 不停发送测试数据
     {
-        Randstr( buf );
-        while ( (send( sockfd, (void *)buf, 256, 0 ) ) != -1 ) 
+        Randstr( buffer );
+        while ( (send( sock, (void *)buffer, 256, 0 ) ) != -1 ) 
         {
-            Randstr( buf );
+            Randstr( buffer );
             sleep( 1 );
         }
     }
     else if ( Number == 4 )     //daytime 以字符串形式发送当前时间
     {
-        GetTime();
-        send( sockfd, (void *)buf, 256, 0 );
+        GetTime( buffer );
+        send( sock, (void *)buffer, 256, 0 );
     }
     else if ( Number == 5 )     //time 以二进制形式发送当前时间
     {
         
     }
+    bzero( buffer, sizeof( buffer ) );
 }
 
 
