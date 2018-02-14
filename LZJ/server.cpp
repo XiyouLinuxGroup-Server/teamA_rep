@@ -245,7 +245,7 @@ void MyJob :: Set( int num, char *buffer, int sock )     //设置数据
 void MyJob :: Randstr( char *buffer )   //产生随机字符串
 {
     int randnum;
-    char str[63] = "qwertyuioplkjhgfdsazxcvbnmQWERYUIOPLKJHGFDSAZXCVBNM123456789";
+    char str[63] = "qwertyuioplkjhgfdsazxcvbnmQWERTYUIOPLKJHGFDSAZXCVBNM0123456789";
     for ( int i = 0; i < 10; i++ ) 
     {
         randnum = rand()%62;    //产生随机数
