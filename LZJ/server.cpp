@@ -281,8 +281,8 @@ void MyJob :: Run( int sock, char *buffer )     //执行任务
         Randstr( buffer );
         while ( (send( sock, (void *)buffer, 256, 0 ) ) != -1 ) 
         {
-            Randstr( buffer );
             sleep( 1 );
+            Randstr( buffer );
         }
     }
     else if ( Number == 4 )     //daytime 以字符串形式发送当前时间
