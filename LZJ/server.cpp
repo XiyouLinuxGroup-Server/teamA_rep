@@ -17,6 +17,7 @@
 #include<fcntl.h>
 #include<errno.h>
 #include<cstdlib>
+#include<cstdio>
 #include<cstring>
 #include<time.h>
 #include<string>
@@ -233,6 +234,7 @@ public:
     void Set( int num, char *buf, int sock );
     void Randstr( char *buffer );
     void GetTime( char *buffer );
+    void Time( char *buffer );
 };
 
 void MyJob :: Set( int num, char *buffer, int sock )     //设置数据
@@ -265,6 +267,24 @@ void MyJob :: GetTime( char *buffer )     //获取时间
     strftime( buffer, 64, "%Y-%m-%d %H:%M:%S", local ); 
 }
 
+void MyJob :: Time( char *buffer )  //以二进制发送从epoch到现在的秒数 
+{
+    time_t t;
+    t = time( nullptr );
+    char tmp[256];
+    sprintf( tmp, "%d", (int)t );   //第三个参数期待int类型
+    int change, k = 0, mask = 8;
+    char bit;
+    for ( short i = 0; i < strlen(tmp); i++ ) 
+    {
+        for ( int j = 0; j < 4; j++ ) 
+        {
+            buffer[k++] = ( mask & (tmp[i]-48) ) ? 49 : 48;
+            mask >>= 1;
+        }
+        mask = 8;
+    }
+}
 
 void MyJob :: Run( int sock, char *buffer )     //执行任务
 {
@@ -292,7 +312,8 @@ void MyJob :: Run( int sock, char *buffer )     //执行任务
     }
     else if ( Number == 5 )     //time 以二进制形式发送当前时间
     {
-        
+        Time( buffer );
+        send( sock, (void *)buffer, 256, 0 );
     }
     bzero( buffer, sizeof( buffer ) );
 }
