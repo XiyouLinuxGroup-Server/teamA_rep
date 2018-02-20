@@ -273,16 +273,16 @@ void MyJob :: Time( char *buffer )  //以二进制发送从epoch到现在的秒�
     t = time( nullptr );
     char tmp[256];
     sprintf( tmp, "%d", (int)t );   //第三个参数期待int类型
-    int change, k = 0, mask = 8;
+    int change, k = 0, mask = 256;
     char bit;
     for ( short i = 0; i < strlen(tmp); i++ ) 
     {
-        for ( int j = 0; j < 4; j++ ) 
+        for ( int j = 0; j < 9; j++ ) 
         {
-            buffer[k++] = ( mask & (tmp[i]-48) ) ? 49 : 48;
+            buffer[k++] = ( mask & (tmp[i]/*-48*/) ) ? 49 : 48; //直接拿ACSLL码来用
             mask >>= 1;
         }
-        mask = 8;
+        mask = 256;
     }
 }
 
