@@ -119,8 +119,8 @@ void* client::recv_from_server(void *arg)
     char buf[256];
     while(1)//一直循环是因为不知道什么时候接受数据
     {
-        ret = recv(sock,(void*)buf,sizeof(buf),0);
-        if(ret <=0)
+        (client*)arg->ret = recv((client*)arg->sock,(void*)buf,sizeof(buf),0);
+        if((client*)arg->ret <=0)
         {
             break;
         }
@@ -133,7 +133,8 @@ int main()
     client test;
     test.init();
     test.send_from_client();
-    pthread_create(&pid,nullptr,test.recv_from_server,nullptr);
+    pthread_create(&pid,nullptr,test.recv_from_server,&test);
+    //将对象传进去
     pthread_mutex_destroy(&test.mutex);
 
     return 0;
