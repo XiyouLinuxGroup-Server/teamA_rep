@@ -33,7 +33,8 @@ class buffer
 {
     public:
         int num;
-        string buf;
+        char buf[256];
+        //如果使用string，是发送不了数据的
 };
 client::client()
 {
@@ -117,10 +118,12 @@ void client::send_from_client()
 void* client::recv_from_server(void *arg)
 {
     char buf[256];
+    client &tmp =*(client*)arg;
     while(1)//一直循环是因为不知道什么时候接受数据
     {
-        (client*)arg->ret = recv((client*)arg->sock,(void*)buf,sizeof(buf),0);
-        if((client*)arg->ret <=0)
+        //->优先级高，所以（client*）arg->ret的时候，arg还是void*
+        tmp.ret = recv(tmp.sock,(void*)buf,sizeof(buf),0);
+        if(tmp.ret <=0)
         {
             break;
         }
@@ -133,7 +136,7 @@ int main()
     client test;
     test.init();
     test.send_from_client();
-    pthread_create(&pid,nullptr,test.recv_from_server,&test);
+    pthread_create(&pid,nullptr,test.recv_from_server,(void*)&test);
     //将对象传进去
     pthread_mutex_destroy(&test.mutex);
 
