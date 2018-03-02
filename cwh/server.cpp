@@ -20,7 +20,7 @@ using namespace std;
 const int MAxBuf = 100;
 const int Min_Thread= 5;
 const int Max_Thread = 10;
-const int PORT = 4507;
+const int PORT = 45077;
 const char *ip = "127.0.0.1";
 const int sock_count = 256;
 void my_error(string str,int line)
@@ -305,6 +305,7 @@ void my_epoll::init()
     }
 
     epfd = epoll_create( 5 );
+    cout <<"链接成功！！！"<<endl;//////////////////
 }
 void my_epoll::epoll_addfd(int epollfd,int sockfd,bool oneshot)
 {
@@ -330,8 +331,8 @@ void my_epoll::epoll_addfd(int epollfd,int sockfd,bool oneshot)
         close( sockfd ); //断开连接
         return ;
     }
-    task.set_data( buf.num, buf, sockfd );/////
-    pool->add_task( &task ); //往线程池添加任务/////
+    task.set_data( buf.num, buf, sockfd );
+    pool->add_task( &task ); //往线程池添加任务
  }
  void my_epoll::epoll_run()
  {

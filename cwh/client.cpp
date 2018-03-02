@@ -1,4 +1,4 @@
-##include<sys/socket.h>
+#include<sys/socket.h>
 #include<netinet/in.h>
 #include<arpa/inet.h>
 #include<sys/types.h>
@@ -86,24 +86,20 @@ void client::send_from_client()
         if(in =="1")
         {
             data.num = 1;
-            break;
         }
         else if(in =="2")
         {
             data.num = 2;
-            break;
         }
         else if(in == "3")
         {
             data.num =3;
-            break;
         }
         else if(in =="4")
         {
             data.num =4;
             cout <<"请输入你要发送的数据;";
             cin >> data.buf;
-            break;
         }
         else 
         {
