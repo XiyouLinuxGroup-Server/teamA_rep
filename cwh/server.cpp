@@ -48,7 +48,7 @@ class my_task
         void chargen();
         void run();
         int get_num();
-        void set_data(int num,buffer tmp,int sock);
+        void set_data(int get_num,buffer tmp,int sock);
 };
 class thread_pool
 {
@@ -147,9 +147,9 @@ void *thread_pool::run_thread(void *arg)
         job->run();
     }
 }
-void my_task::set_data(int num,buffer tmp,int sock)
+void my_task::set_data(int get_num,buffer tmp,int sock)
 {
-    num = num;
+    num = get_num;
     buf = tmp;
     sockfd = sock;
 }
@@ -212,6 +212,7 @@ void my_task::run()
      else if(num == 2)
      {
         daytime();
+        // cout <<"data is:"<<buf.buf<<endl;//////////
         send( sockfd, (void *)&buf, sizeof(buf), 0 );
      }
      else if(num == 3)
@@ -305,7 +306,8 @@ void my_epoll::init()
     }
 
     epfd = epoll_create( 5 );
-    cout <<"链接成功！！！"<<endl;//////////////////
+    epoll_addfd(epfd,sock,false);
+    cout <<"链接成功"<<endl;
 }
 void my_epoll::epoll_addfd(int epollfd,int sockfd,bool oneshot)
 {
@@ -360,6 +362,7 @@ void my_epoll::epoll_addfd(int epollfd,int sockfd,bool oneshot)
                     socklen_t length = sizeof( client_addr );
                     int connfd = accept(sock,(struct sockaddr*)&client_addr,&length);//接受客户端
                     epoll_addfd(epfd,connfd,true);//添加到内核事件中
+                    cout <<"有新事件"<<endl;///////////////////////
                 }
                 
                 else if ( event[i].events & EPOLLIN ) //有可读事件 

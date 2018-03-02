@@ -79,9 +79,10 @@ void client::send_from_client()
 {   
     buffer data;
     string in;
+    display();
     while(1)
     {
-        display();
+        // display();
         cin >> in;
         if(in =="1")
         {
@@ -101,6 +102,10 @@ void client::send_from_client()
             cout <<"请输入你要发送的数据;";
             cin >> data.buf;
         }
+        else if(in =="5")
+        {
+            data.num = 5;
+        }
         else 
         {
             data.num = 0;
@@ -118,17 +123,20 @@ void client::send_from_client()
 }
 void* client::recv_from_server(void *arg)
 {
-    char buf[256];
+    buffer buf;
     client &tmp =*(client*)arg;
     while(1)//一直循环是因为不知道什么时候接受数据
     {
         //->优先级高，所以（client*）arg->ret的时候，arg还是void*
-        tmp.ret = recv(tmp.sock,(void*)buf,sizeof(buf),0);
+        tmp.ret = recv(tmp.sock,(void*)&buf,sizeof(buf),0);
         if(tmp.ret <=0)
         {
+            cout <<"没收到"<<endl;///////
             break;
         }
-        cout <<buf<<endl;
+        cout <<"返回的数据:";
+        cout <<buf.buf<<endl;
+        sleep(3);
     }
 }
 int main()
