@@ -1,12 +1,16 @@
-#include<iostream>
-#include<sys/socket.h>
+##include<sys/socket.h>
 #include<netinet/in.h>
 #include<arpa/inet.h>
+#include<sys/types.h>
 #include<pthread.h>
 #include<unistd.h>
-#include<string.h>
-#include<stdlib.h>
-#include<stdlib.h>//perror的头文件
+#include<assert.h>
+#include<iostream>
+#include<fcntl.h>
+#include<cstdlib>
+#include<cstring>
+#include<string>
+#include<cstdio>//perror的头文件
 using namespace std;
 const char *ip = "127.0.0.1";
 const int port = 45077;
@@ -20,7 +24,7 @@ class client
     public:
         int sock;
         int ret;
-        pthread_mutex_t mutex;
+        static pthread_mutex_t mutex;
         client();
         ~client(){}
         void display();
@@ -29,6 +33,7 @@ class client
         static void* recv_from_server(void *arg);
         //相当于全局函数，非静态函数会在列表中加上一个this指针，和参数不符合
 };
+pthread_mutex_t client :: mutex = PTHREAD_MUTEX_INITIALIZER;
 class buffer
 {
     public:
@@ -40,7 +45,7 @@ client::client()
 {
     sock = 0;
     ret = 0;
-    mutex = PTHREAD_MUTEX_INITIALIZER;
+
 }
 void client::display()
 {
@@ -135,8 +140,9 @@ int main()
     pthread_t pid;
     client test;
     test.init();
-    test.send_from_client();
     pthread_create(&pid,nullptr,test.recv_from_server,(void*)&test);
+    test.send_from_client();
+
     //将对象传进去
     pthread_mutex_destroy(&test.mutex);
 
