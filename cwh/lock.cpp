@@ -21,13 +21,14 @@ int main()
         //在Linux中，默认情况下是在一个线程被创建后，必须使用此函数对创建的线程进行资源回收
 
         pthread_mutex_destroy(&counter_mutex);
+        pthread_mutex_t counter_mutex = PTHREAD_MUTEX_INITIALIZER;
     }
 
 }
 void* thread_son(void * arg)
 {
-    pthread_mutex_lock(&counter_mutex);
+    // pthread_mutex_lock(&counter_mutex);
     count++;
     cout <<"count is "<<count<<endl;
-    pthread_mutex_unlock(&counter_mutex);
+    // pthread_mutex_unlock(&counter_mutex);
 }
