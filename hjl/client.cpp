@@ -17,6 +17,7 @@
 #include<string>
 #include<fcntl.h>
 #include<stdlib.h>
+#include<stdio.h>
 using namespace std;
 
 const char *ip = "127.0.0.1";
@@ -71,12 +72,15 @@ void client::init()//初始化
     int ret;
     memset(&address, 0, sizeof(struct sockaddr_in));
     address.sin_family = AF_INET;
+    address.sin_port = 4507;
     inet_pton(AF_INET, ip, &address.sin_addr);
+    address.sin_port = htons(port);
     //创建套接字
     sock = socket(PF_INET, SOCK_STREAM, 0);
     assert(sock != -1);
     //建立链接
     ret = connect(sock, (struct sockaddr *)&address, sizeof(address));
+    cout << ret << endl;
     assert(ret != -1);
 }
 
@@ -123,7 +127,8 @@ void client::run()//客户端选择运行
     //send to server
     if(buffer.number > 0 && buffer.number < 6)
     {
-        send(sock, (void *)&buffer, sizeof(buffer),MSG_WAITALL);
+        int ret;
+        ret = send(sock, (void *)&buffer, sizeof(buffer),MSG_WAITALL);
     }
     memset(&buffer, 0, sizeof(struct information));
 }
@@ -162,6 +167,8 @@ int main()
         {
             break;
         }
+        getchar();
+        getchar();
     }
     pthread_mutex_destroy(&CL.mutex);
     return 0;
