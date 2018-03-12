@@ -118,7 +118,6 @@ ThreadManage :: ThreadManage()
 {
     pool = new ThreadPool;
 }
-
 ThreadManage :: ~ThreadManage() 
 {
     delete pool;
@@ -170,15 +169,11 @@ void ThreadPool :: AddJob( Job *job )
     pthread_mutex_lock( &mutex );
     cout << " lock ok" << endl;
     JobList.push_back( job );
-<<<<<<< HEAD
     cout << " push ok" << endl;
     IncThread();    //检测是否需要添加线程
     cout << " incr ok" << endl;
     pthread_cond_signal( &cond );   //任务添加后发出信号
     cout << " signal ok" << endl;
-=======
-    pthread_cond_signal( &cond ); //任务添加后发出信号
->>>>>>> revise
     pthread_mutex_unlock( &mutex );
 
 }
@@ -190,7 +185,7 @@ void ThreadPool :: StopAll()
         return ;
     }
     shutdown = true;
-    pthread_cond_broadcast( &cond ); //唤醒所有线程
+    pthread_cond_broadcast( &cond );    //唤醒所有线程
     for ( int i = 0; i < NowNum; i++ ) 
     {
         pthread_join( Free[i], nullptr );
@@ -212,7 +207,7 @@ void* ThreadPool :: FunThread( void *arg )
         //如果没有任务且仍在正常运行　等待
         while ( !shutdown && JobList.size() == 0 ) 
         {
-            pthread_cond_wait( &cond, &mutex );//等待添加任务的唤醒
+            pthread_cond_wait( &cond, &mutex );     //等待添加任务的唤醒
         }
 
         //退出线程
