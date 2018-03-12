@@ -118,7 +118,6 @@ ThreadManage :: ThreadManage()
 {
     pool = new ThreadPool;
 }
-
 ThreadManage :: ~ThreadManage() 
 {
     delete pool;
