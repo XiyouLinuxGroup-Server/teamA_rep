@@ -136,7 +136,7 @@ void* client::recv_from_server(void *arg)
         }
         cout <<"返回的数据:";
         cout <<buf.buf<<endl;
-        sleep(3);
+        // sleep(3);
     }
 }
 int main()
