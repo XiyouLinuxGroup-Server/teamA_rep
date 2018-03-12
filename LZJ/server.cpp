@@ -159,7 +159,7 @@ void ThreadPool :: AddJob( Job *job )
 {
     pthread_mutex_lock( &mutex );
     JobList.push_back( job );
-    pthread_cond_signal( &cond );   //任务添加后发出信号
+    pthread_cond_signal( &cond ); //任务添加后发出信号
     pthread_mutex_unlock( &mutex );
 
 }
@@ -171,7 +171,7 @@ void ThreadPool :: StopAll()
         return ;
     }
     shutdown = true;
-    pthread_cond_broadcast( &cond );    //唤醒所有线程
+    pthread_cond_broadcast( &cond ); //唤醒所有线程
     for ( int i = 0; i < NowNum; i++ ) 
     {
         pthread_join( pid[i], nullptr );
@@ -192,7 +192,7 @@ void* ThreadPool :: FunThread( void *arg )
         //如果没有任务且仍在正常运行　等待
         while ( !shutdown && JobList.size() == 0 ) 
         {
-            pthread_cond_wait( &cond, &mutex );     //等待添加任务的唤醒
+            pthread_cond_wait( &cond, &mutex );//等待添加任务的唤醒
         }
 
         //退出线程

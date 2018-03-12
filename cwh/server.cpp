@@ -23,11 +23,13 @@ const int Max_Thread = 10;
 const int PORT = 45077;
 const char *ip = "127.0.0.1";
 const int sock_count = 256;
-void my_error(string str,int line)
+
+void my_error(const char *const str,int line)
 {
     fprintf(stderr,"line:%d ",line);
-    perror(str.c_str());
+    perror(str);    
 }
+
 class buffer
 {
     public:
@@ -70,10 +72,12 @@ class thread_pool
         int max_thread;   //应该保持的最大空闲线程数
         static void * run_thread(void *arg);
 };
-bool thread_pool :: shutdown = false;
-vector <my_task *> thread_pool  :: queue_list;
-pthread_mutex_t thread_pool  :: mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t thread_pool  :: cond = PTHREAD_COND_INITIALIZER;
+
+bool thread_pool::shutdown = false;
+vector <my_task *> thread_pool::queue_list;
+pthread_mutex_t thread_pool::mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t thread_pool::cond = PTHREAD_COND_INITIALIZER;
+
 thread_pool::thread_pool()
 {
     init_thread = 5;
@@ -140,11 +144,19 @@ void *thread_pool::run_thread(void *arg)
         }
         
         //取出一个任务
-        vector <my_task *> :: iterator itr = queue_list.begin();
+        my_task job = **queue_list.begin();
+        queue_list.erase(queue_list.begin());
+        pthread_mutex_unlock( &mutex );
+        job.run();
+
+        //这里的错误就是itr取了地址，每次后来进入客户端，数据都会全部给后来的客户端发送数据
+        /*
+        auto itr = queue_list.begin();
         my_task *job = *itr;
         queue_list.erase( itr ); //从任务队列删除取出的任务
-        pthread_mutex_unlock( &mutex );
+        pthread_mutex_unlock(&mutex);
         job->run();
+        */
     }
 }
 void my_task::set_data(int get_num,buffer tmp,int sock)
@@ -192,53 +204,57 @@ void my_task::echo()//回显服务
 
 void my_task::chargen()
 {
-    srand((unsigned)time(NULL));
+    unsigned int seed = (unsigned)time(NULL);
+    srand(seed);
     int i =0 ;
     for(i=0;i< 30;i++)
-        buf.buf[i] = rand();
+    {
+        buf.buf[i] = rand()%10+'0'; 
+    }
     buf.buf[i] = '\0';//要成为字符串
 }
+
 int my_task::get_num()
 {
     return buf.num;
 }
 void my_task::run()
 {
-     if(num == 1)
-     {
-         discard();
-         send( sockfd, (void *)&buf, sizeof(buf), 0 );
-     }
-     else if(num == 2)
-     {
-        daytime();
-        // cout <<"data is:"<<buf.buf<<endl;//////////
+    if(num == 1)
+    {
+        discard();
         send( sockfd, (void *)&buf, sizeof(buf), 0 );
-     }
-     else if(num == 3)
-     {
-         my_time();
-         send( sockfd, (void *)&buf, sizeof(buf), 0 );
-     }
-     else if(num == 4)
-     {
-         echo();
-     }
-     else if(num == 5)
-     {
-         chargen();
-         while ( (send( sockfd, (void *)&buf, sizeof(buf), 0 ) ) != -1 ) 
+    }
+    else if(num == 2)
+    {
+        daytime();
+        send( sockfd, (void *)&buf, sizeof(buf), 0 );
+    }
+    else if(num == 3)
+    {
+        my_time();
+        send( sockfd, (void *)&buf, sizeof(buf), 0 );
+    }
+    else if(num == 4)
+    {
+        echo();
+    }
+    else if(num == 5)
+    {
+        chargen();
+        while ( (send( sockfd, (void *)&buf, sizeof(buf), 0 ) ) > 0 ) 
         {
             sleep( 1 );
             chargen();
         }
-     }
-     else 
-     {
-         sprintf(buf.buf,"%s","输入有误！");
-         send(sockfd,(void*)&buf,sizeof(buf),0);
-     }
+    }
+    else 
+    {
+        sprintf(buf.buf,"%s","输入有误！");
+        send(sockfd,(void*)&buf,sizeof(buf),0);
+    }
 }
+
 class my_epoll
 {
    public:
@@ -246,7 +262,6 @@ class my_epoll
         ~my_epoll();
         int setnonblocking(int sockfd);
         void init();
-        //int epoll_accept();//接受客户端
         void epoll_addfd(int epollfd,int sockfd,bool oneshot);//添加到内核事件中
         void epoll_recv(int sockfd);
         void epoll_run();
@@ -299,13 +314,14 @@ void my_epoll::init()
     {
         my_error("bind",__LINE__);
     }
+
     ret = listen( sock, 5 );//监听
      if(sock < 0)
     {
         my_error("listen",__LINE__);
     }
 
-    epfd = epoll_create( 5 );
+    epfd = epoll_create( 5 );//内核事件
     epoll_addfd(epfd,sock,false);
     cout <<"链接成功"<<endl;
 }
@@ -325,16 +341,19 @@ void my_epoll::epoll_addfd(int epollfd,int sockfd,bool oneshot)
  {
     buffer buf;
     int ret;
-    if ( (ret = recv( sockfd, (void *)&buf, sizeof(buf), 0 ) <= 0 ))  
+    if ( (ret = recv( sockfd, (void *)&buf, sizeof(buf), 0 ) ) <= 0 )
     {
         ev.data.fd = sockfd;
         ev.events = EPOLLERR;   //对应文件描述符发生错误
         epoll_ctl( epfd, EPOLL_CTL_DEL, sockfd, &ev );
+        cout << "客户端断开连接！"<<endl;//客户端不发数据是在阻塞状态中，recv等于零证明断开
         close( sockfd ); //断开连接
+       
         return ;
     }
     task.set_data( buf.num, buf, sockfd );
     pool->add_task( &task ); //往线程池添加任务
+    
  }
  void my_epoll::epoll_run()
  {
@@ -361,8 +380,9 @@ void my_epoll::epoll_addfd(int epollfd,int sockfd,bool oneshot)
                     bzero( &client_addr, sizeof(client_addr) );
                     socklen_t length = sizeof( client_addr );
                     int connfd = accept(sock,(struct sockaddr*)&client_addr,&length);//接受客户端
-                    epoll_addfd(epfd,connfd,true);//添加到内核事件中
-                    cout <<"有新事件"<<endl;///////////////////////
+                    printf("Connection from by sock=%d\n", connfd);
+                    epoll_addfd(epfd,connfd,false);//添加到内核事件中
+                    cout <<"有新事件"<<endl;
                 }
                 
                 else if ( event[i].events & EPOLLIN ) //有可读事件 
