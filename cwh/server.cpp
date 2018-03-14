@@ -13,6 +13,7 @@
 #include<time.h>
 #include<string>
 #include<vector>
+#include<csignal>
 #include<cstdio>//perror的头文件
 
 using namespace std;
@@ -39,10 +40,12 @@ class buffer
 };
 class my_task
 {
-    public:
+    private:
         int sockfd;
         buffer buf;
         int num;
+        bool flag;
+    public:
         void discard();
         void daytime();
         void my_time();
@@ -50,7 +53,10 @@ class my_task
         void chargen();
         void run();
         int get_num();
+        void change_status();
         void set_data(int get_num,buffer tmp,int sock);
+        static void change_status(int signo);
+    
 };
 class thread_pool
 {
@@ -60,6 +66,7 @@ class thread_pool
         void create_thread();
         void stop_all();
         void add_task(my_task* task);
+        static void * run_thread(void *arg);
         static bool shutdown;   //标志着线程的退出
         static vector <my_task *> queue_list;  //任务列表
         static pthread_mutex_t mutex;
@@ -70,7 +77,7 @@ class thread_pool
         int now_thread;     //现在拥有的线程数
         int min_thread;   //应该保持的最少的线程数
         int max_thread;   //应该保持的最大空闲线程数
-        static void * run_thread(void *arg);
+        
 };
 
 bool thread_pool::shutdown = false;
@@ -242,7 +249,8 @@ void my_task::run()
     else if(num == 5)
     {
         chargen();
-        while ( (send( sockfd, (void *)&buf, sizeof(buf), 0 ) ) > 0 ) 
+        
+        while ( (send( sockfd, (void *)&buf, sizeof(buf), 0 ) ) > 0 && flag) 
         {
             sleep( 1 );
             chargen();
@@ -265,9 +273,11 @@ class my_epoll
         void epoll_addfd(int epollfd,int sockfd,bool oneshot);//添加到内核事件中
         void epoll_recv(int sockfd);
         void epoll_run();
+        static void change_status(int signo);
     private:
         int sock;
         int epfd;
+        bool flag;
         thread_pool *pool;
         my_task task;
         struct epoll_event ev, *event;  //ev用于处理事件　event数组用于回传要处理的事件
